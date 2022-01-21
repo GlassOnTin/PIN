@@ -48,7 +48,54 @@ namespace PIN.Test
                     Assert.True(pins.IsObvious(new int[] { i - 3, i - 2, i - 1, i }));
                     Assert.True(pins.IsObvious(new int[] { i, i - 1, i - 2, i - 3 }));
                 }
-            }            
+            }
+        }
+
+        /// <summary>
+        /// Asserts that Pins enumerable is empty when starting index greater than the number of PINs
+        /// </summary>
+        [Fact]
+        public void testBadStartIndex()
+        {
+            // Create a Pins enumerable with starting index greater than the number of PINs
+            var pins = new Pins(20000);
+
+            // Assert that pins is empty
+            Assert.Empty(pins.Take(1));
+        }
+
+        /// <summary>
+        /// Asserts that Pins and FF1Pins create the same set of PIN but in different orders
+        /// </summary>
+        [Fact]
+        public void testFF1EqualsPins()
+        {
+            // Create a plain PIN enumerable that can yield a sequence of non-obvious pins
+            var pins = new Pins();
+
+            // Create a set of all non-obvious PINs
+            HashSet<string> allPIN = new HashSet<string>();
+            foreach (string pin in pins)
+            {
+                allPIN.Add(pin);
+            }
+
+            // Generate an AES key to test the secure PIN generator
+            Aes aes = Aes.Create();
+            aes.GenerateKey();
+
+            // Create a secure PIN enumerable that can yield a sequence of non-obvious pins from an encrypted sequence
+            var ff1Pins = new FF1Pins(aes.Key);
+
+            // Create a set of all non-obvious PINs
+            HashSet<string> allSecurePIN = new HashSet<string>();
+            foreach (string pin in ff1Pins)
+            {
+                allSecurePIN.Add(pin);
+            }
+
+            // The secure PIN set should countain all the same elements as the simply PIN set
+            Assert.True(allPIN.SetEquals(allSecurePIN));
         }
 
         /// <summary>
@@ -92,10 +139,10 @@ namespace PIN.Test
         }
 
         /// <summary>
-        /// Asserts that Pins and FF1Pins create the same set of PIN but in different orders
+        /// Asserts that that FF1Pins only yields unique PINs and creates a different sequence of PINs for different keys
         /// </summary>
-        [Fact]        
-        public void testFF1EqualsPins()
+        [Fact]
+        public void testFF1PersistancePins()
         {
             // Create a plain PIN enumerable that can yield a sequence of non-obvious pins
             var pins = new Pins();
@@ -104,25 +151,21 @@ namespace PIN.Test
             HashSet<string> allPIN = new HashSet<string>();
             foreach (string pin in pins)
             {
-                allPIN.Add(pin);                
+                allPIN.Add(pin);
             }
-            
-            // Generate an AES key to test the secure PIN generator
-            Aes aes = Aes.Create();
-            aes.GenerateKey();
 
             // Create a secure PIN enumerable that can yield a sequence of non-obvious pins from an encrypted sequence
-            var ff1Pins = new FF1Pins(aes.Key);
+            var ff1Pins = new FF1PersistantPins();
 
-            // Create a set of all non-obvious PINs
-            HashSet<string> allSecurePIN = new HashSet<string>();
-            foreach (string pin in ff1Pins)
+            // Create a List of all non-obvious encrypted PINs that contains twice as many PINs as the plain PIN enumerable
+            List<string> allSecurePIN = new List<string>();            
+            foreach (string pin in ff1Pins.Take(2*allPIN.Count))
             {
-                allSecurePIN.Add(pin);                
+                allSecurePIN.Add(pin);
             }
 
-            // The secure PIN set should countain all the same elements as the simply PIN set
-            Assert.True(allPIN.SetEquals(allSecurePIN));
+            // Assert that allSecurePIN contains the same set of PIN as the plain PINs
+            Assert.True(allSecurePIN.ToHashSet().SetEquals(allPIN));
         }
     }
 }

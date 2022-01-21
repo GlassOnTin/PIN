@@ -16,7 +16,7 @@ namespace PIN
         /// <summary>
         /// The Format-preserving encryption (FPE) method used to provide a cryptographically random sequence of PINs
         /// </summary>
-        private readonly FF1 ff1;
+        protected readonly FF1 ff1;
 
         // Create byte array for additional entropy when using Protect method.
         static byte[] additionalEntropy = { 189, 252, 159, 140, 48 };
@@ -25,7 +25,7 @@ namespace PIN
         /// <summary>
         /// The AES Key used to provide the encrypted sequence of PINs.  The key is stored in protected memory
         /// </summary>
-        private byte[] aesKey
+        protected byte[] aesKey
         {
             set => _aesKey = ProtectedData.Protect(value, additionalEntropy, DataProtectionScope.CurrentUser);
             get => ProtectedData.Unprotect(_aesKey, additionalEntropy, DataProtectionScope.CurrentUser);
@@ -61,21 +61,22 @@ namespace PIN
         public override IEnumerator<string> GetEnumerator()
         {
             int index = startingIndex;
-            int lastIndex = (int)(Math.Pow(radix, length) - 1);
             byte[] tweak = new byte[0];
             int[] pin;
             while (true)
             {
-                pin = PossiblyObviousPINIndices(index, length);
-                pin = ff1.encrypt(aesKey, tweak, pin);
-                if (!IsObvious(pin))
-                {
-                    yield return CharacterIndicesToString(pin);
-                }
-                if (index == lastIndex)
+                if (index >= LastIndex)
                 {
                     yield break;
                 }
+
+                pin = PossiblyObviousPINIndices(index, length);
+                pin = ff1.encrypt(aesKey, tweak, pin);
+                
+                if (!IsObvious(pin))
+                {
+                    yield return CharacterIndicesToString(pin);
+                }                
                 index++;
             };
         }

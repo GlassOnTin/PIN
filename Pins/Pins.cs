@@ -15,7 +15,7 @@ namespace PIN
         /// <summary>
         /// The index of the first PIN to yield
         /// </summary>
-        protected readonly int startingIndex;
+        protected int startingIndex;
 
         /// <summary>
         /// The number of characters in the PIN
@@ -32,9 +32,18 @@ namespace PIN
         /// </summary>
         protected readonly int radix;
 
+        /// <summary>
+        /// Returns the largest index after which there are no more PINs
+        /// </summary>
+        public int LastIndex
+        {
+            get => (int)(Math.Pow(radix, length));
+        }
+
         public Pins(int startingIndex = 0, int length = 4, string characterSet = "0123456789")
         {
             // The index of the first PIN to yield
+            if (startingIndex < 0) startingIndex = 0;
             this.startingIndex = startingIndex;
 
             // The number of characters in the PIN
@@ -62,20 +71,21 @@ namespace PIN
         public virtual IEnumerator<string> GetEnumerator()
         {
             int index = startingIndex;
-            int lastIndex = (int)(Math.Pow(radix, length) - 1);
 
             int[] pin;
             while (true)
-            {               
-                pin = PossiblyObviousPINIndices(index, length);
-                if (!IsObvious(pin))
-                {
-                    yield return CharacterIndicesToString(pin);
-                }
-                if (index == lastIndex)
+            {
+                if (index >= LastIndex)
                 {
                     yield break;
                 }
+
+                pin = PossiblyObviousPINIndices(index, length);
+
+                if (!IsObvious(pin))
+                {
+                    yield return CharacterIndicesToString(pin);
+                }                
                 index++;
             };
         }
